@@ -16,31 +16,121 @@ library(ggplot2)
 library(data.table)
 library(dplyr)
 library(lubridate)
+library(curl)
 ```
 
 Load daily data from European Center for Disease Control:
 
 ```{r}
-covid_today <- fread("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-2020-03-25_0.csv")
+covid_cumul <- (fread("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"))
 ```
-Change date format to system date format.
+Change to data.frame and change date format to system date format.
 ```{r}
-covid_today$DateRep <- format(as.Date(covid_today$DateRep, format="%d/%m/%Y"),"%Y/%m/%d")
+
+covid_cumul <- data.frame(covid_cumul)
 ```
 
+```{r}
+covid_cumul$dateRep <- format(as.Date(covid_cumul$dateRep, format="%d/%m/%Y"),"%Y-%m-%d")
+```
+
+Add new feature: deathRatio
+
+```{r}
+  covid_cumul$deathRatio <-
+    covid_cumul$deaths / covid_cumul$cases
+```
 Store system date as today
 
 ```{r}
 today <- Sys.Date()
 ```
-
+Show only data from today.
 ```{r}
 covid_new <-
-    covid_today %>%
-    filter(Deaths >= 1) %>%
-    filter(DateRep == today)
+    covid_cumul %>%
+    filter(deaths >= 1) %>%
+    filter(dateRep == today)
+
+
 ```
 
 ```{r}
-covid_
+View(covid_new)
 ```
+Number of new deaths
+```{r}
+sum(covid_new$deaths)
+```
+
+Filter out hotspots from cumulative data
+
+```{r}
+covid_hotspots <- 
+  covid_cumul %>%
+  filter(geoId == "IT" | geoId == "ES" | geoId == "IR" | geoId == "DE" | geoId ==  "US" | geoId == "UK") 
+```         
+
+Filter out only new data from the hotspot data
+    
+```{r}
+ covid_hotspots_new <-
+  covid_hotspots %>%
+    filter(deaths >= 1) %>%
+    filter(dateRep == today)
+```
+
+PLot new deaths reported in hotspots:
+```{r}
+ ggplot(covid_hotspots_new, aes(x = geoId, y = deaths))+
+  geom_point() +
+  ggtitle("Deaths Reported Today in Hotspot Countries")
+  
+```
+
+Data Frame with only US data from mid march:
+
+```{r}
+covid_US <- 
+  covid_cumul %>%
+    filter(geoId == "US") %>%
+    filter(dateRep >= "2020-03-15")
+
+```
+
+Data Frame with hotspot data from mid march
+
+```{r}
+covid_march_compare <-
+    covid_hotspots %>%
+    filter(dateRep >= "2020-03-15")
+```
+
+
+
+Plot change in US cases over time, compare with other hotspots
+
+```{r}
+covid_march_compare %>%
+  ggplot(aes(x = as.Date(dateRep), y = cases)) +
+  geom_line(aes(color = countriesAndTerritories)) +
+  ggtitle("New Cases over Time in Top Countries") +
+  labs(x = "Date", y = "Reported Cases", color = "Country")
+```
+
+Visualize ratio of deaths to cases reported.
+Plot deathRatio to compare countries.
+
+```{r}
+covid_march_compare %>%
+  ggplot(aes(x = as.Date(dateRep), y = deathRatio)) +
+  geom_line(aes(color = countriesAndTerritories)) +
+  ggtitle("Ratio of deaths to new cases") +
+  labs(x = "Date", y = "Ratio of Deaths to new Cases", color = "Country")
+```
+
+
+
+
+
+
