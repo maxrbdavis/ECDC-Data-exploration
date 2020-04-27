@@ -130,6 +130,8 @@ covid_march_compare %>%
 ```
 
 
+Is there a way to predict what will be the number of new cases reported in a particular country on a given day?
+
 
 
 
